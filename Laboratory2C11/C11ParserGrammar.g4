@@ -1,10 +1,4 @@
-﻿parser grammar C11ParserGrammar;
-
-options {
-    tokenVocab = C11LexerGrammar;
-}
-
-/*
+﻿/*
  [The "BSD licence"]
  Copyright (c) 2013 Sam Harwell
  All rights reserved.
@@ -30,14 +24,20 @@ options {
  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+parser grammar C11ParserGrammar;
+
+options {
+    tokenVocab = C11LexerGrammar;
+}
+
 /** C 2011 grammar built from the C11 Spec */
 
 primaryExpression
-    :   Identifier
-    |   Constant
-    |   StringLiteral+
-    |   '(' expression ')'
-    |   genericSelection   
+    :   Identifier          #primaryExpression_Identifier
+    |   Constant            #primaryExpression_Constant
+    |   StringLiteral+      #primaryExpression_StringLiteral
+    |   '(' expression ')'  #primaryExpression_Parenthesis
+    |   genericSelection    #primaryExpression_GenericSelection
     ;
 
 genericSelection
@@ -53,11 +53,12 @@ genericAssociation
     ;
 
 postfixExpression
-    :  primaryExpression
-    | '[' expression ']'
-    | '(' argumentExpressionList? ')'
-    | ('.' | '->') Identifier
-    | ('++' | '--')    
+    :  primaryExpression                                  #postfixExpression_NoPostfix
+    | postfixExpression '[' expression ']'                #postfixExpression_ArraySubscripting
+    | postfixExpression '(' argumentExpressionList? ')'   #postfixExpression_FunctionCalls  
+    | postfixExpression ('.' | '->') Identifier           #postfixExpression_StructureUnionMembers
+    | postfixExpression ('++' | '--')                     #postfixExpression_PostfixIncrementDecrement
+    | '(' typeName ')' '{' initializerList ','? '}'       #postfixExpression_CompoundLiterals
     ;
 
 argumentExpressionList
@@ -65,73 +66,79 @@ argumentExpressionList
     ;
 
 unaryExpression
-    :
-    ('++' |  '--' |  'sizeof')*
-    (postfixExpression
-    |   unaryOperator castExpression
-    |   ('sizeof' | '_Alignof') '(' typeName ')'
-    |   '&&' Identifier // GCC extension address of label
-    )
+    : postfixExpression                             #unaryExpression_noUnaryExpression
+    | ('++' |  '--' | 'sizeof' )+ unaryExpression   #unaryExpression_nestedUnaryExpression
+    | unaryOperator castExpression                  #unaryExpression_castExpression
+    | ( 'sizeof' | '_Alignof' ) '(' typeName ')'    #unaryExpression_unaryExpressionOnType
     ;
 
 unaryOperator
-    :   '&' | '*' | '+' | '-' | '~' | '!'
+    :   '&' | '*' | '+' | '-' | '~' | '!'  // unary operators cannot nest
     ;
 
 castExpression
-    :   '(' typeName ')' castExpression
-    |   unaryExpression
-    |   DigitSequence // for
+    :   '(' typeName ')' castExpression     #castExpression_casting
+    |   unaryExpression                     #castExpression_nocasting
     ;
 
 multiplicativeExpression
-    :   castExpression (('*'|'/'|'%') castExpression)*
+    :   castExpression                                  #multiplicativeExpression_noMultiplicative
+    |   castExpression op=('*'|'/'|'%') castExpression  #multiplicativeExpression_MulORDivORMod
     ;
 
 additiveExpression
-    :   multiplicativeExpression (('+'|'-') multiplicativeExpression)*
+    :   multiplicativeExpression                                        #additiveExpression_NoAdditive
+    |   multiplicativeExpression ('+'|'-') multiplicativeExpression  #additiveExpression_AddORSub
     ;
 
-shiftExpression
-    :   additiveExpression (('<<'|'>>') additiveExpression)*
+shiftExpression    
+    :   additiveExpression                                      #shiftExpression_NoShiftExpression
+     |  additiveExpression ('<<'|'>>') additiveExpression    #shiftExpression_ShiftLeftORRight
     ;
 
 relationalExpression
-    :   shiftExpression (('<'|'>'|'<='|'>=') shiftExpression)*
+    :   shiftExpression                                     #relationalExpression_NorelationalExpression 
+    |   shiftExpression ('<'|'>'|'<='|'>=') shiftExpression #relationalExpression_LessORGreaterORLessEqORGreaterEq
     ;
 
 equalityExpression
-    :   relationalExpression (('=='| '!=') relationalExpression)*
+    :   relationalExpression                                    #equalityExpression_NoEqualityExpression
+     |  relationalExpression ('=='| '!=') relationalExpression  #equalityExpression_EqualORNotEqual
     ;
 
 andExpression
-    :   equalityExpression ( '&' equalityExpression)*
+    :   equalityExpression                          #andExpression_NoAndExpression                         
+    |   equalityExpression '&' equalityExpression   #andExpression_AndExpression
     ;
 
 exclusiveOrExpression
-    :   andExpression ('^' andExpression)*
+    :   andExpression                   #exclusiveOrExpression_NoExclusiveOrExpression
+    |   andExpression '^' andExpression #exclusiveOrExpression_ExclusiveOrExpression
     ;
 
 inclusiveOrExpression
-    :   exclusiveOrExpression ('|' exclusiveOrExpression)*
+    :   exclusiveOrExpression                            #inclusiveOrExpression_NoInclusiveOrExpression                            
+    | exclusiveOrExpression  '^'  exclusiveOrExpression  #inclusiveOrExpression_InclusiveOrExpression
     ;
 
 logicalAndExpression
-    :   inclusiveOrExpression ('&&' inclusiveOrExpression)*
+    :   inclusiveOrExpression                               #logicalAndExpression_NoLogicalAndExpression 
+    |   inclusiveOrExpression  '&&' inclusiveOrExpression   #logicalAndExpression_LogicalANDExpression
     ;
 
 logicalOrExpression
-    :   logicalAndExpression ( '||' logicalAndExpression)*
+    :   logicalAndExpression                                #logicalOrExpression_NologicalOrExpression
+     |  logicalAndExpression  '||' logicalAndExpression     #logicalOrExpression_LogicalORExpression
     ;
 
 conditionalExpression
-    :   logicalOrExpression ('?' expression ':' conditionalExpression)?
+    :   logicalOrExpression                                             #conditionalExpression_NoconditionalExpression 
+    |   logicalOrExpression '?' expression ':' conditionalExpression    #conditionalExpression_ConditionalExpression
     ;
 
 assignmentExpression
-    :   conditionalExpression
-    |   unaryExpression assignmentOperator assignmentExpression
-    |   DigitSequence // for
+    :   conditionalExpression                                       #assignmentExpression_NoassignmentExpression
+    |   unaryExpression assignmentOperator assignmentExpression     #assignmentExpression_AssignmentExpression
     ;
 
 assignmentOperator
@@ -139,7 +146,8 @@ assignmentOperator
     ;
 
 expression
-    :   assignmentExpression (',' assignmentExpression)*
+    :   assignmentExpression                                #expression_SingleExpression
+     |  assignmentExpression (',' assignmentExpression)*    #expression_CommaExpression
     ;
 
 constantExpression
@@ -147,8 +155,8 @@ constantExpression
     ;
 
 declaration
-    :   declarationSpecifiers initDeclaratorList? ';'
-    |   staticAssertDeclaration
+    :   declarationSpecifiers initDeclaratorList? ';'   #declaration_declaration
+    |   staticAssertDeclaration                         #declaration_StaticAssertDeclaration
     ;
 
 declarationSpecifiers

@@ -1,3 +1,15 @@
-﻿// See https://aka.ms/new-console-template for more information
+﻿using Microsoft.Extensions.Hosting;
 
-Console.WriteLine("Hello, World!");
+using IHost host = Host.CreateDefaultBuilder(args).Build();
+
+// This will get the current WORKING directory (i.e. \bin\Debug)
+string workingDirectory = Environment.CurrentDirectory;
+
+// This will get the current PROJECT bin directory (ie ../bin/)
+string projectDirectory = Directory.GetParent(workingDirectory).Parent.Parent.FullName;
+
+// Application code should start here.
+CompilerFacade facade = new CompilerFacade(projectDirectory);
+
+facade.Parse();
+await host.RunAsync(); 

@@ -9,15 +9,26 @@
 
     <ItemGroup>
       <PackageReference Include="Antlr4.Runtime.Standard" Version="4.11.1" />
+      <PackageReference Include="Antlr4BuildTasks" Version="12.0" PrivateAssets="all" />
+      <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
     </ItemGroup>
 
     <ItemGroup>
-      <Compile Include="obj\C11LexerGrammar.cs" />
-      <Compile Include="obj\C11ParserGrammar.cs" />
-      <Compile Include="obj\C11ParserGrammarBaseListener.cs" />
-      <Compile Include="obj\C11ParserGrammarBaseVisitor.cs" />
-      <Compile Include="obj\C11ParserGrammarListener.cs" />
-      <Compile Include="obj\C11ParserGrammarVisitor.cs" />
+      <Antlr4 Include="C11LexerGrammar.g4" />
+      <Antlr4 Include="C11ParserGrammar.g4" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="bin\Debug\net6.0\ST.gif" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Include="obj\C11LexerGrammar.cs" />
+      <None Include="obj\C11ParserGrammar.cs" />
+      <None Include="obj\C11ParserGrammarBaseListener.cs" />
+      <None Include="obj\C11ParserGrammarBaseVisitor.cs" />
+      <None Include="obj\C11ParserGrammarListener.cs" />
+      <None Include="obj\C11ParserGrammarVisitor.cs" />
     </ItemGroup>
 
 </Project>
